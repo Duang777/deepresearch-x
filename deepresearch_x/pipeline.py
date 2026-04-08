@@ -6,9 +6,11 @@ import re
 import time
 import uuid
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Dict, Iterable, List
 
+from deepresearch_x.alignment import SimilarityScorer, build_semantic_scorer
 from deepresearch_x.adapters.llm import HeuristicLLMProvider, LLMProvider, OpenAIProvider
 from deepresearch_x.adapters.reader import HybridPageReader
 from deepresearch_x.adapters.search import DuckDuckGoSearchProvider, MockSearchProvider, SearchProvider
@@ -85,6 +87,10 @@ class ResearchPipeline:
         self.settings = settings
         self.page_reader = page_reader
         self.memory_service = memory_service or MemoryService(default_store=InMemoryStore())
+        self.semantic_scorer: SimilarityScorer | None = build_semantic_scorer(
+            enabled=settings.enable_semantic_alignment,
+            model_name=settings.semantic_model_name,
+        )
 
     @classmethod
     def from_settings(cls, settings: AppSettings) -> "ResearchPipeline":
@@ -154,6 +160,8 @@ class ResearchPipeline:
             memory_backend=active_backend,
             memory_scope=active_scope,
             use_memory=active_use_memory,
+            semantic_alignment=bool(self.semantic_scorer),
+            page_fetch_workers=self.settings.page_fetch_workers,
         )
 
         total_start = time.perf_counter()
@@ -212,20 +220,24 @@ class ResearchPipeline:
 
             if self.page_reader and new_sources:
                 fetch_start = time.perf_counter()
-                for source in new_sources[: self.settings.max_page_fetch_per_loop]:
-                    if source.is_mock:
-                        if not source.content_preview:
-                            source.content_preview = source.snippet
-                        source.fetch_status = "fulltext_mock"
-                        continue
-                    read_result = self.page_reader.read(
-                        url=source.url,
-                        max_chars=self.settings.max_page_chars,
-                    )
-                    source.fetch_status = read_result.status
-                    source.fetch_error = read_result.error[:220]
-                    if read_result.preview_text:
-                        source.content_preview = read_result.preview_text
+                to_fetch = new_sources[: self.settings.max_page_fetch_per_loop]
+                worker_count = max(1, min(self.settings.page_fetch_workers, len(to_fetch)))
+                if worker_count <= 1:
+                    for source in to_fetch:
+                        self._enrich_source_content(source)
+                else:
+                    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+                        future_map = {
+                            executor.submit(self._enrich_source_content, source): source
+                            for source in to_fetch
+                        }
+                        for future in as_completed(future_map):
+                            source = future_map[future]
+                            try:
+                                future.result()
+                            except Exception as exc:  # pragma: no cover
+                                source.fetch_status = "fetch_failed"
+                                source.fetch_error = str(exc)[:220]
                 stage.source_fetch_ms += int((time.perf_counter() - fetch_start) * 1000)
 
             claim_start = time.perf_counter()
@@ -453,15 +465,41 @@ class ResearchPipeline:
 
     def _align_evidence(self, claims: List[Claim], sources: List[SourceDocument]) -> List[Claim]:
         aligned_claims: List[Claim] = []
+        scorer = self.semantic_scorer
+        use_semantic = bool(scorer)
+        semantic_weight = self.settings.semantic_weight if use_semantic else 0.0
+        keyword_weight = self.settings.keyword_weight
+        weight_total = semantic_weight + keyword_weight
+        if weight_total <= 0:
+            keyword_weight = 1.0
+            weight_total = 1.0
         for claim in claims:
             keywords = self._keywords(claim.statement + " " + claim.rationale)
+            candidate_texts = [
+                f"{src.title} {src.snippet} {src.content_preview}" for src in sources
+            ]
+            semantic_scores = (
+                scorer.score(
+                    query=f"{claim.statement}. {claim.rationale}",
+                    documents=candidate_texts,
+                )
+                if scorer
+                else [0.0 for _ in sources]
+            )
             source_scored = []
-            for src in sources:
+            for idx, src in enumerate(sources):
                 hay = f"{src.title} {src.snippet} {src.content_preview}".lower()
                 hit = sum(1 for kw in keywords if kw in hay)
-                if hit <= 0:
+                keyword_score = min(1.0, hit / max(1, min(len(keywords), 6)))
+                semantic_score = semantic_scores[idx] if idx < len(semantic_scores) else 0.0
+                if hit <= 0 and semantic_score < 0.42:
                     continue
-                score = min(1.0, 0.2 + hit * 0.12)
+                score = (
+                    (keyword_weight * keyword_score + semantic_weight * semantic_score)
+                    / weight_total
+                )
+                if src.fetch_status.startswith("fulltext"):
+                    score = min(1.0, score + 0.05)
                 source_scored.append((score, src))
 
             source_scored.sort(key=lambda x: x[0], reverse=True)
@@ -535,7 +573,7 @@ class ResearchPipeline:
     def _best_excerpt_from_content(keywords: List[str], content: str) -> str:
         if not content:
             return ""
-        sentences = re.split(r"(?<=[.!?。！？])\s+", content)
+        sentences = re.split(r"(?<=[.!?\u3002\uff01\uff1f])\s*", content)
         best_sentence = ""
         best_score = 0
         for sentence in sentences:
@@ -550,6 +588,23 @@ class ResearchPipeline:
         if best_score <= 0:
             return ""
         return best_sentence[:320]
+
+    def _enrich_source_content(self, source: SourceDocument) -> None:
+        if not self.page_reader:
+            return
+        if source.is_mock:
+            if not source.content_preview:
+                source.content_preview = source.snippet
+            source.fetch_status = "fulltext_mock"
+            return
+        read_result = self.page_reader.read(
+            url=source.url,
+            max_chars=self.settings.max_page_chars,
+        )
+        source.fetch_status = read_result.status
+        source.fetch_error = read_result.error[:220]
+        if read_result.preview_text:
+            source.content_preview = read_result.preview_text
 
     def _estimate_tokens(
         self,

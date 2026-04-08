@@ -4,7 +4,7 @@ from deepresearch_x.adapters.llm import HeuristicLLMProvider
 from deepresearch_x.adapters.search import MockSearchProvider
 from deepresearch_x.config import AppSettings
 from deepresearch_x.memory import InMemoryStore, MemoryService, OpenVikingMemoryAdapter
-from deepresearch_x.models import Claim, MemoryFact, SourceAttribution
+from deepresearch_x.models import Claim, MemoryFact, PipelineMetrics, SourceAttribution
 from deepresearch_x.pipeline import ResearchPipeline
 
 
@@ -174,3 +174,5 @@ def test_pipeline_session_continuity_with_memory(tmp_path: Path) -> None:
     assert r3.metrics.claim_count >= 1
     checkpoints = pipeline.get_session_checkpoints(session_id=session_id, memory_backend="sqlite")
     assert len(checkpoints) >= 2
+    assert isinstance(checkpoints[0].metrics, PipelineMetrics)
+    assert checkpoints[0].metrics.claim_count >= 1

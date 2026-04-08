@@ -16,6 +16,7 @@ class AppSettings:
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
     enable_page_reader: bool = os.getenv("ENABLE_PAGE_READER", "true").lower() == "true"
     max_page_fetch_per_loop: int = int(os.getenv("MAX_PAGE_FETCH_PER_LOOP", "3"))
+    page_fetch_workers: int = int(os.getenv("PAGE_FETCH_WORKERS", "4"))
     max_page_chars: int = int(os.getenv("MAX_PAGE_CHARS", "12000"))
     reader_timeout_seconds: float = float(os.getenv("READER_TIMEOUT_SECONDS", "8"))
     cheap_model_cost_per_1k: float = float(
@@ -43,3 +44,12 @@ class AppSettings:
     memory_ttl_hours: int = int(os.getenv("MEMORY_TTL_HOURS", "336"))
     memory_max_global_facts: int = int(os.getenv("MEMORY_MAX_GLOBAL_FACTS", "600"))
     memory_max_session_facts: int = int(os.getenv("MEMORY_MAX_SESSION_FACTS", "250"))
+    enable_semantic_alignment: bool = (
+        os.getenv("ENABLE_SEMANTIC_ALIGNMENT", "false").lower() == "true"
+    )
+    semantic_model_name: str = os.getenv(
+        "SEMANTIC_MODEL_NAME",
+        "sentence-transformers/all-MiniLM-L6-v2",
+    )
+    semantic_weight: float = float(os.getenv("SEMANTIC_WEIGHT", "0.6"))
+    keyword_weight: float = float(os.getenv("KEYWORD_WEIGHT", "0.4"))
