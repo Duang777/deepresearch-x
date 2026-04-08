@@ -1,0 +1,270 @@
+:root {
+  --bg: #f6f8fb;
+  --ink: #132238;
+  --muted: #4f637d;
+  --card: #ffffff;
+  --line: #d7dee9;
+  --primary: #1c7ed6;
+  --primary-dark: #0f4f8a;
+  --accent: #f08c00;
+  --ok: #2b8a3e;
+  --warn: #c92a2a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Helvetica Neue", "Noto Sans", sans-serif;
+  background:
+    radial-gradient(circle at 10% 0%, #ddeeff 0%, transparent 38%),
+    radial-gradient(circle at 90% 100%, #ffe8cc 0%, transparent 35%),
+    var(--bg);
+  color: var(--ink);
+}
+
+.container {
+  width: min(1080px, 94vw);
+  margin: 32px auto 48px;
+  display: grid;
+  gap: 18px;
+}
+
+.hero {
+  background: linear-gradient(128deg, #eaf4ff 0%, #fff9ec 100%);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.kicker {
+  margin: 0;
+  color: var(--primary-dark);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.78rem;
+}
+
+h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(2rem, 3.6vw, 3rem);
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 75ch;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.pill-row {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pill-row span {
+  border: 1px solid #c7d4e8;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+form {
+  display: grid;
+  gap: 12px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+input,
+select {
+  border: 1px solid #bdc9dd;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fbfdff;
+  color: var(--ink);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.toggle-label input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(120deg, var(--primary), var(--primary-dark));
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.hidden {
+  display: none;
+}
+
+.bar {
+  margin-top: 8px;
+  height: 10px;
+  border-radius: 999px;
+  background: #e6edf8;
+  overflow: hidden;
+}
+
+#bar-fill {
+  display: block;
+  width: 22%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { width: 18%; }
+  50% { width: 76%; }
+  100% { width: 22%; }
+}
+
+.metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.metric-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.metric-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.83rem;
+}
+
+.metric-value {
+  margin: 8px 0 0;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.claim {
+  border: 1px solid #d8e0ec;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.claim h3 {
+  margin: 0 0 6px;
+}
+
+.claim small {
+  color: var(--muted);
+}
+
+.confidence {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.conflict {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+pre {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.step {
+  border-left: 3px solid #abc5e8;
+  padding-left: 10px;
+  margin-bottom: 10px;
+}
+
+.source-row {
+  border: 1px solid #d8e0ec;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #fbfdff;
+}
+
+.source-row p {
+  margin: 0 0 6px;
+}
+
+.ok-badge,
+.warn-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  vertical-align: middle;
+}
+
+.ok-badge {
+  background: #d3f9d8;
+  color: #2b8a3e;
+}
+
+.warn-badge {
+  background: #fff3bf;
+  color: #e67700;
+}
+
+@media (max-width: 760px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
