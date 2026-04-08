@@ -2,26 +2,54 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Pytest](https://img.shields.io/badge/tests-pytest%20passing-2ea44f?logo=pytest&logoColor=white)](https://pytest.org/)
-[![Memory Backend](https://img.shields.io/badge/memory-sqlite%20%7C%20openviking-0A7EA4)](docs/OPENVIKING_INTEGRATION.md)
+[![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
+[![Tests](https://img.shields.io/badge/Tests-pytest-2ea44f?logo=pytest&logoColor=white)](https://pytest.org/)
+[![Memory Backend](https://img.shields.io/badge/Memory-SQLite%20%7C%20OpenViking-0A7EA4)](docs/OPENVIKING_INTEGRATION.md)
+[![Stars](https://img.shields.io/github/stars/Duang777/deepresearch-x?style=social)](https://github.com/Duang777/deepresearch-x/stargazers)
 
 ![DeepResearch-X Architecture Cover](docs/assets/architecture-cover.svg)
 
-面向深度研究任务的工程化 Agent 系统，提供可追踪证据链、分层记忆管理、可降级适配架构与可量化评测能力。
+DeepResearch-X 是一个工程化的深度研究 Agent 系统，提供证据链追踪、分层记忆管理、可插拔后端和可量化评测能力。  
+_DeepResearch-X is a production-oriented deep research agent with traceable evidence, layered memory, pluggable backends, and measurable benchmarking._
 
-English (brief): A production-oriented deep research agent with traceable evidence, layered memory, graceful fallback, and measurable benchmark outputs.
+---
 
-## 核心能力
-- 多轮研究流水线：`retrieve -> claim extraction -> evidence alignment -> report`
-- 证据链可追踪：每条结论关联来源链接、相关分数、证据片段
-- 页面富文本增强：`direct fetch -> Jina Reader fallback`
-- 分层记忆机制：`session` / `global` / `hybrid`
-- 异步记忆提取：去重、冲突标注、置信度更新
-- 记忆注入预算：控制上下文大小，避免 prompt 膨胀
-- 可插拔后端：默认 SQLite，支持 OpenViking 适配与自动回退
-- 可观测性指标：延迟、成本估算、记忆命中、写入冲突等
+## 快速导航 | Navigation
 
-## 架构设计
+- [Docs Index](#docs-index)
+- [核心特性](#核心特性--core-capabilities)
+- [系统架构](#系统架构--architecture)
+- [快速开始](#快速开始--quick-start)
+- [配置说明](#配置说明--configuration)
+- [API 概览](#api-概览--api-overview)
+- [运行与评测](#运行与评测--operations--benchmarking)
+- [质量保障](#质量保障--quality-gates)
+- [项目结构](#项目结构--project-layout)
+- [Roadmap](#roadmap)
+
+## Docs Index
+
+| 文档 | 说明 | English |
+|---|---|---|
+| [README.md](README.md) | 项目总览、架构、API、运行方式 | Project overview, architecture, API, operations |
+| [docs/OPENVIKING_INTEGRATION.md](docs/OPENVIKING_INTEGRATION.md) | OpenViking 集成与运维手册 | OpenViking integration and operations guide |
+| [docs/INTERVIEW_PLAYBOOK.md](docs/INTERVIEW_PLAYBOOK.md) | 开发运行与演示流程手册 | Developer runbook and demo procedure |
+
+## 核心特性 | Core Capabilities
+
+| 能力 | 说明 | English |
+|---|---|---|
+| 多轮研究流水线 | `retrieve -> claim extraction -> evidence alignment -> report` | Multi-loop orchestration pipeline |
+| 证据链追踪 | 结论绑定来源 URL、相关度分数和证据片段 | Claim-to-source traceability |
+| 富文本抓取增强 | `direct fetch` 失败时回退 `r.jina.ai` | Full-text enrichment with fallback |
+| 分层记忆 | `session` / `global` / `hybrid` 三种作用域 | Layered memory scopes |
+| 异步记忆提取 | 去重、冲突标注、置信度更新 | Async memory extraction and reconciliation |
+| 预算化注入 | `memory_budget_tokens` 控制上下文体积 | Budgeted memory injection |
+| 后端可插拔 | SQLite 默认，OpenViking 可选并自动降级 | Pluggable backends with graceful fallback |
+| 量化评测 | 基线与优化方案三路对比报告 | Quantitative benchmarking and comparison |
+
+## 系统架构 | Architecture
+
 ```mermaid
 flowchart LR
     API["FastAPI API Layer"] --> PIPE["ResearchPipeline"]
@@ -35,19 +63,15 @@ flowchart LR
     PIPE --> OUT["Structured Result + Metrics"]
 ```
 
-设计要点：
-- 以 `ResearchPipeline` 为唯一编排入口，保证行为一致性。
-- 通过 `adapter + protocol` 保持边界清晰，便于替换实现。
-- 外部记忆服务失败不影响主流程，自动降级本地后端。
+设计原则：
+- 单一编排入口：`ResearchPipeline`
+- 协议化边界：`adapter + protocol`
+- 可降级优先：外部依赖异常时保持主链路可用
 
-## 技术栈
-- Python 3.10+
-- FastAPI / Jinja2
-- Pydantic v2
-- httpx / lxml / ddgs
-- pytest
+_Design principles: single orchestration entrypoint, protocol-driven boundaries, and graceful degradation by default._
 
-## 快速开始
+## 快速开始 | Quick Start
+
 ```powershell
 cd D:/DUAN/APP/deepresearch-x
 python -m venv .venv
@@ -57,12 +81,37 @@ Copy-Item .env.example .env
 uvicorn deepresearch_x.app:app --reload
 ```
 
-访问：
+访问地址：
 - [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-## API 概览
+## 配置说明 | Configuration
+
+`.env` 关键配置：
+
+| 分类 | 配置项 | 默认值 |
+|---|---|---|
+| Provider | `SEARCH_PROVIDER` | `duckduckgo` |
+| Provider | `LLM_PROVIDER` | `heuristic` |
+| Provider | `OPENAI_MODEL` | `gpt-4.1-mini` |
+| Reader | `ENABLE_PAGE_READER` | `true` |
+| Reader | `MAX_PAGE_FETCH_PER_LOOP` | `3` |
+| Reader | `MAX_PAGE_CHARS` | `12000` |
+| Reader | `READER_TIMEOUT_SECONDS` | `8` |
+| Cost | `CHEAP_MODEL_COST_PER_1K` | `0.0006` |
+| Cost | `EXPENSIVE_MODEL_COST_PER_1K` | `0.005` |
+| Memory | `ENABLE_MEMORY` | `true` |
+| Memory | `MEMORY_BACKEND` | `sqlite` |
+| Memory | `MEMORY_SQLITE_PATH` | `outputs/memory_store.db` |
+| Memory | `MEMORY_BUDGET_TOKENS` | `280` |
+| Memory | `MEMORY_SCOPE` | `hybrid` |
+| Memory | `MEMORY_QUEUE_WAIT_MS` | `220` |
+| OpenViking | `OPENVIKING_BASE_URL` | `http://127.0.0.1:8100` |
+| OpenViking | `OPENVIKING_TIMEOUT_SECONDS` | `0.8` |
+
+## API 概览 | API Overview
 
 ### POST `/api/research`
+
 请求示例：
 ```json
 {
@@ -88,45 +137,18 @@ uvicorn deepresearch_x.app:app --reload
 - `memory_conflict_count`
 
 ### GET `/api/sessions/{session_id}`
-- 返回会话 checkpoint 历史（含每次运行的指标快照）。
+- 返回会话 checkpoint 历史和指标快照。
 
 ### GET `/api/memory/{session_id}`
-- 返回会话相关记忆条目（支持 `memory_scope` 与 `memory_backend` 参数）。
+- 返回会话记忆条目，支持 `memory_scope` 与 `memory_backend` 参数。
 
-## 配置说明
-`.env` 关键项：
+## 运行与评测 | Operations & Benchmarking
 
-- Providers
-- `SEARCH_PROVIDER=duckduckgo|mock`
-- `LLM_PROVIDER=heuristic|openai`
-- `OPENAI_MODEL=gpt-4.1-mini`
-
-- Reader
-- `ENABLE_PAGE_READER=true|false`
-- `MAX_PAGE_FETCH_PER_LOOP=3`
-- `MAX_PAGE_CHARS=12000`
-- `READER_TIMEOUT_SECONDS=8`
-
-- Cost
-- `CHEAP_MODEL_COST_PER_1K=0.0006`
-- `EXPENSIVE_MODEL_COST_PER_1K=0.005`
-
-- Memory
-- `ENABLE_MEMORY=true|false`
-- `MEMORY_BACKEND=sqlite|openviking`
-- `MEMORY_SQLITE_PATH=outputs/memory_store.db`
-- `MEMORY_BUDGET_TOKENS=280`
-- `MEMORY_SCOPE=session|global|hybrid`
-- `MEMORY_QUEUE_WAIT_MS=220`
-
-- OpenViking
-- `OPENVIKING_BASE_URL=http://127.0.0.1:8100`
-- `OPENVIKING_TIMEOUT_SECONDS=0.8`
-
-更多细节见：
-- [OpenViking Integration Notes](docs/OPENVIKING_INTEGRATION.md)
-
-## 评测与产物
+### 启动服务
+```powershell
+.venv/Scripts/activate
+uvicorn deepresearch_x.app:app --reload
+```
 
 ### 批量运行
 ```powershell
@@ -134,7 +156,7 @@ uvicorn deepresearch_x.app:app --reload
 python scripts/run_benchmark.py --topics-file examples/benchmark_topics.jsonl --loops 3 --top-k 6 --output outputs/benchmark_results.jsonl
 ```
 
-### 可复现离线运行
+### 可复现离线模式
 ```powershell
 $env:SEARCH_PROVIDER="mock"
 python scripts/run_benchmark.py --topics-file examples/benchmark_topics.jsonl --loops 1 --top-k 3 --limit 3 --disable-memory --output outputs/mock_benchmark.jsonl
@@ -150,20 +172,23 @@ python scripts/compare_benchmark.py --topics-file examples/benchmark_topics.json
 - `outputs/compare/memory_compare_results.jsonl`
 - `outputs/compare/memory_ab_report.md`
 
-## 开发与测试
+## 质量保障 | Quality Gates
+
+运行测试：
 ```powershell
 .venv/Scripts/activate
 python -m pytest -q
 ```
 
-当前测试覆盖：
-- pipeline 主流程
+当前覆盖范围：
+- pipeline 主流程回归
 - 记忆去重与冲突标注
-- 记忆预算截断
+- 记忆注入预算限制
 - OpenViking fallback 契约
-- 同 session 连续运行一致性
+- 同一会话多次运行一致性
 
-## 目录结构
+## 项目结构 | Project Layout
+
 ```text
 deepresearch-x/
   deepresearch_x/
@@ -197,13 +222,8 @@ deepresearch-x/
     test_memory.py
 ```
 
-## 可靠性与降级策略
-- 外部搜索不可用时：自动回退 `MockSearchProvider`
-- 页面抓取失败时：自动回退 `r.jina.ai` Reader
-- OpenViking 不可达时：自动回退 SQLite（含失败冷却）
-- 所有路径保留结构化输出，避免“因单点失败导致全流程中断”
-
 ## Roadmap
-- 增加异步任务队列（任务级并发调度）
-- 增加质量评估模块（coverage / novelty / citation precision）
-- 增加 CI 持续对比基准（回归质量门禁）
+- 引入异步任务编排队列（任务级并发调度）
+- 增加研究结果质量评估模块（coverage/novelty/citation precision）
+- 接入 CI 持续基准对比与质量门禁
+- 增加可观测性导出（Prometheus/OpenTelemetry）
