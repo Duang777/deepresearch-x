@@ -1,6 +1,7 @@
 const form = document.getElementById("research-form");
 const runBtn = document.getElementById("run-btn");
 const loadingBox = document.getElementById("loading");
+const degradedBox = document.getElementById("degraded-status");
 const metricsBox = document.getElementById("metrics");
 const claimsBox = document.getElementById("claims");
 const sourcesBox = document.getElementById("sources");
@@ -45,7 +46,7 @@ function buildTrend(meta, currentValue, previousValue) {
   }
 
   const improved = meta.higherBetter ? delta > 0 : delta < 0;
-  const arrow = improved ? "▲" : "▼";
+  const arrow = improved ? "UP" : "DOWN";
   const cls = improved ? "trend-up" : "trend-down";
   const unit = meta.unit || "";
   return { label: `${arrow} ${formatDeltaNumber(delta)}${unit}`, cls };
@@ -70,10 +71,32 @@ function renderMetrics(metrics) {
     { key: "source_count", label: "Sources", higherBetter: true },
     { key: "fulltext_source_count", label: "Full-Text", higherBetter: true },
     { key: "claim_count", label: "Claims", higherBetter: true },
-    { key: "total_elapsed_ms", label: "Latency", higherBetter: false, unit: "ms", formatter: (v) => `${v} ms` },
-    { key: "source_fetch_elapsed_ms", label: "Source Fetch", higherBetter: false, unit: "ms", formatter: (v) => `${v} ms` },
-    { key: "estimated_tokens", label: "Tokens", higherBetter: false, formatter: (v) => Number(v).toLocaleString() },
-    { key: "estimated_cost_usd", label: "Est. Cost", higherBetter: false, formatter: (v) => `$${v}` },
+    {
+      key: "total_elapsed_ms",
+      label: "Latency",
+      higherBetter: false,
+      unit: "ms",
+      formatter: (v) => `${v} ms`,
+    },
+    {
+      key: "source_fetch_elapsed_ms",
+      label: "Source Fetch",
+      higherBetter: false,
+      unit: "ms",
+      formatter: (v) => `${v} ms`,
+    },
+    {
+      key: "estimated_tokens",
+      label: "Tokens",
+      higherBetter: false,
+      formatter: (v) => Number(v).toLocaleString(),
+    },
+    {
+      key: "estimated_cost_usd",
+      label: "Est. Cost",
+      higherBetter: false,
+      formatter: (v) => `$${v}`,
+    },
   ];
 
   if (typeof metrics.memory_recall_hits === "number") {
@@ -95,10 +118,36 @@ function renderMetrics(metrics) {
       formatter: (v) => `${v} ms`,
     });
   }
+  if (typeof metrics.degraded_fallback_count === "number") {
+    specs.push({
+      key: "degraded_fallback_count",
+      label: "Fallback Count",
+      higherBetter: false,
+    });
+  }
 
   metricsBox.innerHTML = specs.map((spec) => metricCard(spec, metrics)).join("");
   previousMetrics = metrics;
   show(metricsBox, true);
+}
+
+function renderDegradedStatus(data) {
+  if (!data || !data.degraded_mode) {
+    show(degradedBox, false);
+    return;
+  }
+  const reasons = Array.isArray(data.degraded_reasons) ? data.degraded_reasons : [];
+  const reasonHtml = reasons.length
+    ? `<ul>${reasons.map((r) => `<li>${sanitize(r)}</li>`).join("")}</ul>`
+    : "";
+  degradedBox.innerHTML = `
+    <h2>Degraded Mode Active</h2>
+    <p>
+      This run used fallback behavior. Treat output as degraded and verify before production use.
+    </p>
+    ${reasonHtml}
+  `;
+  show(degradedBox, true);
 }
 
 function renderClaims(claims) {
@@ -172,7 +221,10 @@ function applyInlineMarkdown(line) {
   let html = sanitize(line);
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  html = html.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noreferrer">$1</a>'
+  );
   return html;
 }
 
@@ -249,6 +301,7 @@ form.addEventListener("submit", async (event) => {
   if (!topic) return;
 
   show(loadingBox, true);
+  show(degradedBox, false);
   show(metricsBox, false);
   show(claimsBox, false);
   show(sourcesBox, false);
@@ -278,6 +331,7 @@ form.addEventListener("submit", async (event) => {
     }
     const data = await response.json();
 
+    renderDegradedStatus(data);
     renderMetrics(data.metrics);
     if (data.session_id) {
       document.getElementById("session_id").value = data.session_id;

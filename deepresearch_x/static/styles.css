@@ -298,6 +298,30 @@ button:disabled {
     var(--panel);
 }
 
+.degraded-panel {
+  border-color: #f2b48e;
+  background:
+    linear-gradient(110deg, rgba(211, 143, 40, 0.15), rgba(177, 76, 47, 0.08)),
+    #fff9f4;
+}
+
+.degraded-panel h2 {
+  margin: 0;
+  color: #8f3c20;
+  font-size: 1rem;
+  font-family: "Sora", sans-serif;
+}
+
+.degraded-panel p {
+  margin: 8px 0 0;
+  color: #7d4b36;
+}
+
+.degraded-panel ul {
+  margin: 10px 0 0 18px;
+  color: #6c3f2d;
+}
+
 .bar {
   margin-top: 14px;
   height: 11px;

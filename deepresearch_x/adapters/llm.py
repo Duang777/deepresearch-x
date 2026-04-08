@@ -120,7 +120,6 @@ class OpenAIProvider:
             ) from exc
         self.model = model
         self.client = OpenAI()
-        self.fallback = HeuristicLLMProvider()
 
     def extract_claims(
         self,
@@ -175,9 +174,11 @@ class OpenAIProvider:
                         confidence=0.65,
                     )
                 )
-            return claims if claims else self.fallback.extract_claims(topic, sources, memory_context)
-        except Exception:
-            return self.fallback.extract_claims(topic, sources, memory_context)
+            if not claims:
+                raise RuntimeError("OpenAI returned no claim objects.")
+            return claims
+        except Exception as exc:
+            raise RuntimeError(f"OpenAI claim extraction failed: {exc}") from exc
 
     def synthesize_report(
         self,
@@ -186,7 +187,7 @@ class OpenAIProvider:
         memory_context: str = "",
     ) -> str:
         if not claims:
-            return self.fallback.synthesize_report(topic, claims, memory_context)
+            raise RuntimeError("OpenAI report synthesis skipped because claims are empty.")
 
         payload = [
             {
@@ -209,6 +210,9 @@ class OpenAIProvider:
                 model=self.model,
                 input=prompt,
             )
-            return response.output_text.strip()
-        except Exception:
-            return self.fallback.synthesize_report(topic, claims, memory_context)
+            text = response.output_text.strip()
+            if not text:
+                raise RuntimeError("OpenAI returned an empty report.")
+            return text
+        except Exception as exc:
+            raise RuntimeError(f"OpenAI report synthesis failed: {exc}") from exc

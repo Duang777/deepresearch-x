@@ -148,6 +148,8 @@ class ResearchPipeline:
         memory_context = ""
         memory_facts: List[MemoryFact] = []
         memory_tokens = 0
+        degraded_reasons: List[str] = []
+        heuristic_fallback = HeuristicLLMProvider()
 
         if active_use_memory:
             selection = self.memory_service.select_for_injection(
@@ -170,8 +172,20 @@ class ResearchPipeline:
             retrieval_start = time.perf_counter()
             try:
                 fetched = self.search_provider.search(query=query, top_k=top_k)
-            except Exception:
-                fetched = MockSearchProvider().search(query=query, top_k=top_k)
+            except Exception as exc:
+                if (
+                    self.settings.allow_search_mock_fallback
+                    and self.settings.search_provider.lower() != "mock"
+                ):
+                    fetched = MockSearchProvider().search(query=query, top_k=top_k)
+                    self._append_degraded_reason(
+                        degraded_reasons,
+                        f"search_fallback:{self.settings.search_provider.lower()}->mock:{exc.__class__.__name__}",
+                    )
+                else:
+                    raise RuntimeError(
+                        "Search provider failed and mock fallback is disabled."
+                    ) from exc
             stage.retrieval_ms += int((time.perf_counter() - retrieval_start) * 1000)
 
             new_sources: List[SourceDocument] = []
@@ -199,11 +213,30 @@ class ResearchPipeline:
                 stage.source_fetch_ms += int((time.perf_counter() - fetch_start) * 1000)
 
             claim_start = time.perf_counter()
-            extracted = self.llm_provider.extract_claims(
-                topic=topic,
-                sources=list(all_sources.values()),
-                memory_context=memory_context,
-            )
+            try:
+                extracted = self.llm_provider.extract_claims(
+                    topic=topic,
+                    sources=list(all_sources.values()),
+                    memory_context=memory_context,
+                )
+            except Exception as exc:
+                if (
+                    self.settings.allow_llm_heuristic_fallback
+                    and self.settings.llm_provider.lower() == "openai"
+                ):
+                    extracted = heuristic_fallback.extract_claims(
+                        topic=topic,
+                        sources=list(all_sources.values()),
+                        memory_context=memory_context,
+                    )
+                    self._append_degraded_reason(
+                        degraded_reasons,
+                        f"llm_fallback:openai->heuristic_extract:{exc.__class__.__name__}",
+                    )
+                else:
+                    raise RuntimeError(
+                        "LLM claim extraction failed and heuristic fallback is disabled."
+                    ) from exc
             aligned = self._align_evidence(extracted, list(all_sources.values()))
             stage.claim_ms += int((time.perf_counter() - claim_start) * 1000)
             latest_claims = aligned
@@ -220,11 +253,30 @@ class ResearchPipeline:
             )
 
         report_start = time.perf_counter()
-        report = self.llm_provider.synthesize_report(
-            topic=topic,
-            claims=latest_claims,
-            memory_context=memory_context,
-        )
+        try:
+            report = self.llm_provider.synthesize_report(
+                topic=topic,
+                claims=latest_claims,
+                memory_context=memory_context,
+            )
+        except Exception as exc:
+            if (
+                self.settings.allow_llm_heuristic_fallback
+                and self.settings.llm_provider.lower() == "openai"
+            ):
+                report = heuristic_fallback.synthesize_report(
+                    topic=topic,
+                    claims=latest_claims,
+                    memory_context=memory_context,
+                )
+                self._append_degraded_reason(
+                    degraded_reasons,
+                    f"llm_fallback:openai->heuristic_report:{exc.__class__.__name__}",
+                )
+            else:
+                raise RuntimeError(
+                    "LLM report synthesis failed and heuristic fallback is disabled."
+                ) from exc
         stage.report_ms = int((time.perf_counter() - report_start) * 1000)
 
         memory_write_count = 0
@@ -262,6 +314,7 @@ class ResearchPipeline:
             memory_recall_hits=len(memory_facts),
             memory_injection_tokens=memory_tokens,
             memory_queue_latency_ms=memory_queue_latency_ms,
+            degraded_fallback_count=len(degraded_reasons),
         )
 
         memory_snapshot = (
@@ -302,6 +355,8 @@ class ResearchPipeline:
             memory_used_count=len(memory_facts),
             memory_write_count=memory_write_count,
             memory_conflict_count=memory_conflict_count,
+            degraded_mode=bool(degraded_reasons),
+            degraded_reasons=degraded_reasons,
         )
 
     def get_session_checkpoints(
@@ -470,3 +525,8 @@ class ResearchPipeline:
             (cheap_tokens / 1000.0) * self.settings.cheap_model_cost_per_1k
             + (expensive_tokens / 1000.0) * self.settings.expensive_model_cost_per_1k
         )
+
+    @staticmethod
+    def _append_degraded_reason(reasons: List[str], reason: str) -> None:
+        if reason not in reasons:
+            reasons.append(reason)

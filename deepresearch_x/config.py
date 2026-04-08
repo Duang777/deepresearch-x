@@ -34,3 +34,9 @@ class AppSettings:
     memory_queue_wait_ms: int = int(os.getenv("MEMORY_QUEUE_WAIT_MS", "220"))
     openviking_base_url: str = os.getenv("OPENVIKING_BASE_URL", "http://127.0.0.1:8100")
     openviking_timeout_seconds: float = float(os.getenv("OPENVIKING_TIMEOUT_SECONDS", "0.8"))
+    allow_search_mock_fallback: bool = (
+        os.getenv("ALLOW_SEARCH_MOCK_FALLBACK", "false").lower() == "true"
+    )
+    allow_llm_heuristic_fallback: bool = (
+        os.getenv("ALLOW_LLM_HEURISTIC_FALLBACK", "false").lower() == "true"
+    )

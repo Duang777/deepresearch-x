@@ -59,6 +59,7 @@ class PipelineMetrics(BaseModel):
     memory_recall_hits: int = 0
     memory_injection_tokens: int = 0
     memory_queue_latency_ms: int = 0
+    degraded_fallback_count: int = 0
 
 
 class MemoryFact(BaseModel):
@@ -107,6 +108,8 @@ class ResearchRunResult(BaseModel):
     memory_used_count: int = 0
     memory_write_count: int = 0
     memory_conflict_count: int = 0
+    degraded_mode: bool = False
+    degraded_reasons: List[str] = Field(default_factory=list)
 
 
 class ResearchRequest(BaseModel):

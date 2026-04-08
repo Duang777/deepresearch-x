@@ -113,6 +113,8 @@ uvicorn deepresearch_x.app:app --reload
 | Memory | `MEMORY_BUDGET_TOKENS` | `280` |
 | Memory | `MEMORY_SCOPE` | `hybrid` |
 | Memory | `MEMORY_QUEUE_WAIT_MS` | `220` |
+| Fallback | `ALLOW_SEARCH_MOCK_FALLBACK` | `false` |
+| Fallback | `ALLOW_LLM_HEURISTIC_FALLBACK` | `false` |
 | OpenViking | `OPENVIKING_BASE_URL` | `http://127.0.0.1:8100` |
 | OpenViking | `OPENVIKING_TIMEOUT_SECONDS` | `0.8` |
 
@@ -143,6 +145,8 @@ uvicorn deepresearch_x.app:app --reload
 - `memory_used_count`
 - `memory_write_count`
 - `memory_conflict_count`
+- `degraded_mode`
+- `degraded_reasons`
 
 ### GET `/api/sessions/{session_id}`
 - 返回会话 checkpoint 历史和指标快照。
