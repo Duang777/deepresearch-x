@@ -7,97 +7,114 @@
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
+  <div class="backdrop-grid" aria-hidden="true"></div>
+  <div class="glow glow-a" aria-hidden="true"></div>
+  <div class="glow glow-b" aria-hidden="true"></div>
+
   <main class="container">
-    <section class="hero">
-      <p class="kicker">Interview Project Starter</p>
+    <header class="hero reveal-on-load">
+      <div class="hero-topline">
+        <p class="kicker">Research Orchestrator</p>
+        <div class="status-inline">
+          <span class="dot"></span>
+          <span>Live pipeline</span>
+        </div>
+      </div>
       <h1>DeepResearch-X</h1>
       <p class="subtitle">
-        Evidence-first deep research agent with claim traceability, contradiction hints, and cost-aware reporting.
+        Build evidence-first reports with layered memory, contradiction signals, and measurable system metrics.
       </p>
       <div class="pill-row">
         <span>Search: {{ search_provider }}</span>
         <span>LLM: {{ llm_provider }}</span>
         <span>Output: Markdown + JSON</span>
       </div>
-    </section>
+    </header>
 
-    <section class="panel">
-      <form id="research-form">
-        <label>
-          Research Topic
-          <input
-            type="text"
-            id="topic"
-            placeholder="e.g. Multi-agent deep research trends in 2026"
-            minlength="4"
-            required
-          />
-        </label>
-        <div class="grid-2">
-          <label>
-            Loops
-            <input type="number" id="loops" min="1" max="6" value="{{ default_loops }}" />
-          </label>
-          <label>
-            Top-K Per Loop
-            <input type="number" id="top_k" min="3" max="10" value="{{ default_top_k }}" />
-          </label>
+    <div class="workspace">
+      <aside class="panel control-panel reveal-on-load">
+        <div class="panel-head">
+          <h2>Run Configuration</h2>
+          <p>Tune retrieval, memory, and session settings before execution.</p>
         </div>
-        <div class="grid-2">
+        <form id="research-form">
           <label>
-            Session ID
-            <input type="text" id="session_id" placeholder="optional: e.g. interview-demo" />
-          </label>
-          <label>
-            Memory Budget (tokens)
+            Research Topic
             <input
-              type="number"
-              id="memory_budget_tokens"
-              min="64"
-              max="2000"
-              value="{{ default_memory_budget_tokens }}"
+              type="text"
+              id="topic"
+              placeholder="e.g. Multi-agent deep research trends in 2026"
+              minlength="4"
+              required
             />
           </label>
-        </div>
-        <div class="grid-2">
-          <label>
-            Memory Backend
-            <select id="memory_backend">
-              <option value="sqlite" {% if default_memory_backend == "sqlite" %}selected{% endif %}>sqlite</option>
-              <option value="openviking" {% if default_memory_backend == "openviking" %}selected{% endif %}>openviking</option>
-            </select>
+          <div class="grid-2">
+            <label>
+              Loops
+              <input type="number" id="loops" min="1" max="6" value="{{ default_loops }}" />
+            </label>
+            <label>
+              Top-K Per Loop
+              <input type="number" id="top_k" min="3" max="10" value="{{ default_top_k }}" />
+            </label>
+          </div>
+          <div class="grid-2">
+            <label>
+              Session ID
+              <input type="text" id="session_id" placeholder="optional: e.g. research-session-01" />
+            </label>
+            <label>
+              Memory Budget (tokens)
+              <input
+                type="number"
+                id="memory_budget_tokens"
+                min="64"
+                max="2000"
+                value="{{ default_memory_budget_tokens }}"
+              />
+            </label>
+          </div>
+          <div class="grid-2">
+            <label>
+              Memory Backend
+              <select id="memory_backend">
+                <option value="sqlite" {% if default_memory_backend == "sqlite" %}selected{% endif %}>sqlite</option>
+                <option value="openviking" {% if default_memory_backend == "openviking" %}selected{% endif %}>openviking</option>
+              </select>
+            </label>
+            <label>
+              Memory Scope
+              <select id="memory_scope">
+                <option value="session" {% if default_memory_scope == "session" %}selected{% endif %}>session</option>
+                <option value="global" {% if default_memory_scope == "global" %}selected{% endif %}>global</option>
+                <option value="hybrid" {% if default_memory_scope == "hybrid" %}selected{% endif %}>hybrid</option>
+              </select>
+            </label>
+          </div>
+          <label class="toggle-label">
+            <input type="checkbox" id="use_memory" checked />
+            Enable memory and session checkpoints
           </label>
-          <label>
-            Memory Scope
-            <select id="memory_scope">
-              <option value="session" {% if default_memory_scope == "session" %}selected{% endif %}>session</option>
-              <option value="global" {% if default_memory_scope == "global" %}selected{% endif %}>global</option>
-              <option value="hybrid" {% if default_memory_scope == "hybrid" %}selected{% endif %}>hybrid</option>
-            </select>
-          </label>
-        </div>
-        <label class="toggle-label">
-          <input type="checkbox" id="use_memory" checked />
-          Enable memory + session checkpoints
-        </label>
-        <button type="submit" id="run-btn">Run Deep Research</button>
-      </form>
-    </section>
+          <button type="submit" id="run-btn">Run Deep Research</button>
+        </form>
+      </aside>
 
-    <section id="loading" class="panel hidden">
-      <p class="loading-text">Running multi-step research pipeline...</p>
-      <div class="bar"><span id="bar-fill"></span></div>
-    </section>
+      <section class="result-column">
+        <section id="loading" class="panel loading-panel hidden">
+          <div class="loading-head">
+            <h2>Pipeline Running</h2>
+            <p>Retrieving sources, aligning evidence, and synthesizing report output.</p>
+          </div>
+          <div class="bar"><span id="bar-fill"></span></div>
+        </section>
 
-    <section id="metrics" class="metrics hidden"></section>
-
-    <section id="claims" class="panel hidden"></section>
-
-    <section id="sources" class="panel hidden"></section>
-
-    <section id="report" class="panel hidden"></section>
-
-    <section id="trace" class="panel hidden"></section>
+        <section id="metrics" class="metrics hidden"></section>
+        <section id="claims" class="panel hidden"></section>
+        <section id="sources" class="panel hidden"></section>
+        <section id="report" class="panel hidden"></section>
+        <section id="trace" class="panel hidden"></section>
+      </section>
+    </div>
   </main>
 
   <script src="/static/app.js"></script>

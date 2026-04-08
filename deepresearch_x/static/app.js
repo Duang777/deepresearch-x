@@ -10,6 +10,10 @@ const traceBox = document.getElementById("trace");
 function show(el, yes = true) {
   if (yes) {
     el.classList.remove("hidden");
+    el.classList.remove("reveal-in");
+    requestAnimationFrame(() => {
+      el.classList.add("reveal-in");
+    });
   } else {
     el.classList.add("hidden");
   }
@@ -56,7 +60,7 @@ function renderMetrics(metrics) {
 
 function renderClaims(claims) {
   if (!claims.length) {
-    claimsBox.innerHTML = "<h2>Claims</h2><p>No claims were extracted.</p>";
+    claimsBox.innerHTML = "<h2>Claim-Evidence Chain</h2><p>No claims were extracted in this run.</p>";
     show(claimsBox, true);
     return;
   }
@@ -96,7 +100,7 @@ function renderClaims(claims) {
 
 function renderSources(sources) {
   if (!sources.length) {
-    sourcesBox.innerHTML = "<h2>Source Quality</h2><p>No sources found.</p>";
+    sourcesBox.innerHTML = "<h2>Source Quality</h2><p>No source candidates were returned.</p>";
     show(sourcesBox, true);
     return;
   }
