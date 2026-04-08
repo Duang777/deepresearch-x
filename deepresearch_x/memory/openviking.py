@@ -68,6 +68,13 @@ class OpenVikingMemoryAdapter:
     def get_checkpoints(self, session_id: str, limit: int = 20) -> List[SessionCheckpoint]:
         return self.fallback_store.get_checkpoints(session_id, limit)
 
+    def compact(self, ttl_hours: int, max_session_facts: int, max_global_facts: int) -> int:
+        return self.fallback_store.compact(
+            ttl_hours=ttl_hours,
+            max_session_facts=max_session_facts,
+            max_global_facts=max_global_facts,
+        )
+
     def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
         with httpx.Client(timeout=self.timeout_seconds) as client:

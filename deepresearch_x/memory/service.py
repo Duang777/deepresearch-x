@@ -114,6 +114,20 @@ class MemoryService:
         store = self.resolve_store(backend)
         return store.get_memory(session_id=session_id, scope=scope, limit=limit)
 
+    def compact(
+        self,
+        backend: str,
+        ttl_hours: int,
+        max_session_facts: int,
+        max_global_facts: int,
+    ) -> int:
+        store = self.resolve_store(backend)
+        return store.compact(
+            ttl_hours=ttl_hours,
+            max_session_facts=max_session_facts,
+            max_global_facts=max_global_facts,
+        )
+
     def _worker_loop(self) -> None:
         while True:
             job = self._queue.get()

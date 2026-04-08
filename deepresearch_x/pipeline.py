@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 import re
 import time
 import uuid
@@ -22,6 +24,8 @@ from deepresearch_x.models import (
     SourceAttribution,
     SourceDocument,
 )
+
+logger = logging.getLogger("deepresearch_x.pipeline")
 
 
 STOP_WORDS = {
@@ -139,6 +143,18 @@ class ResearchPipeline:
         if active_backend not in {"sqlite", "openviking"}:
             active_backend = "sqlite"
         active_budget = memory_budget_tokens or self.settings.memory_budget_tokens
+        self._log_event(
+            "run_start",
+            run_id=run_id,
+            session_id=active_session_id,
+            loops=loops,
+            top_k=top_k,
+            search_provider=self.settings.search_provider,
+            llm_provider=self.settings.llm_provider,
+            memory_backend=active_backend,
+            memory_scope=active_scope,
+            use_memory=active_use_memory,
+        )
 
         total_start = time.perf_counter()
         stage = StageTimers()
@@ -282,6 +298,7 @@ class ResearchPipeline:
         memory_write_count = 0
         memory_conflict_count = 0
         memory_queue_latency_ms = 0
+        memory_compact_removed = 0
         if active_use_memory:
             outcome = self.memory_service.enqueue_claims(
                 session_id=active_session_id,
@@ -293,6 +310,12 @@ class ResearchPipeline:
             memory_write_count = outcome.result.write_count
             memory_conflict_count = outcome.result.conflict_count
             memory_queue_latency_ms = outcome.elapsed_ms
+            memory_compact_removed = self.memory_service.compact(
+                backend=active_backend,
+                ttl_hours=self.settings.memory_ttl_hours,
+                max_session_facts=self.settings.memory_max_session_facts,
+                max_global_facts=self.settings.memory_max_global_facts,
+            )
 
         total_elapsed_ms = int((time.perf_counter() - total_start) * 1000)
         estimated_tokens = self._estimate_tokens(topic, all_sources.values(), latest_claims, report)
@@ -315,6 +338,7 @@ class ResearchPipeline:
             memory_injection_tokens=memory_tokens,
             memory_queue_latency_ms=memory_queue_latency_ms,
             degraded_fallback_count=len(degraded_reasons),
+            memory_compact_removed=memory_compact_removed,
         )
 
         memory_snapshot = (
@@ -338,9 +362,22 @@ class ResearchPipeline:
             claim_count=len(latest_claims),
             memory_snapshot_count=len(memory_snapshot),
             created_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            metrics=metrics.model_dump(),
+            metrics=metrics,
         )
         self.memory_service.save_checkpoint(backend=active_backend, checkpoint=checkpoint)
+
+        self._log_event(
+            "run_finish",
+            run_id=run_id,
+            session_id=active_session_id,
+            degraded_mode=bool(degraded_reasons),
+            degraded_reasons=degraded_reasons,
+            source_count=metrics.source_count,
+            claim_count=metrics.claim_count,
+            latency_ms=metrics.total_elapsed_ms,
+            est_cost=metrics.estimated_cost_usd,
+            compact_removed=metrics.memory_compact_removed,
+        )
 
         return ResearchRunResult(
             run_id=run_id,
@@ -402,8 +439,17 @@ class ResearchPipeline:
             return f"{topic} latest trends evidence"
         if not latest_claims:
             return f"{topic} verification contradictory evidence"
-        anchor = latest_claims[0].statement[:90]
-        return f"{topic} verification contradictory evidence {anchor}"
+        sorted_claims = sorted(latest_claims, key=lambda c: c.confidence, reverse=True)
+        top_claims = sorted_claims[:2]
+        anchors = []
+        for claim in top_claims:
+            key_terms = self._keywords(f"{claim.statement} {claim.rationale}")[:4]
+            if key_terms:
+                anchors.append(" ".join(key_terms))
+            else:
+                anchors.append(claim.statement[:80])
+        conflict_hint = "resolve contradiction" if any(c.conflicting_sources for c in top_claims) else "verify evidence"
+        return f"{topic} {conflict_hint} {' '.join(anchors)}"
 
     def _align_evidence(self, claims: List[Claim], sources: List[SourceDocument]) -> List[Claim]:
         aligned_claims: List[Claim] = []
@@ -530,3 +576,9 @@ class ResearchPipeline:
     def _append_degraded_reason(reasons: List[str], reason: str) -> None:
         if reason not in reasons:
             reasons.append(reason)
+            logger.warning("degraded_fallback %s", reason)
+
+    @staticmethod
+    def _log_event(event: str, **payload: object) -> None:
+        body = {"event": event, **payload}
+        logger.info(json.dumps(body, ensure_ascii=False, default=str))

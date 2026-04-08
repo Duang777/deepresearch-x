@@ -60,6 +60,7 @@ class PipelineMetrics(BaseModel):
     memory_injection_tokens: int = 0
     memory_queue_latency_ms: int = 0
     degraded_fallback_count: int = 0
+    memory_compact_removed: int = 0
 
 
 class MemoryFact(BaseModel):
@@ -87,7 +88,7 @@ class SessionCheckpoint(BaseModel):
     claim_count: int
     memory_snapshot_count: int
     created_at: str
-    metrics: dict
+    metrics: PipelineMetrics
 
 
 class MemoryUpsertResult(BaseModel):

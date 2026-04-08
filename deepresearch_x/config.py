@@ -40,3 +40,6 @@ class AppSettings:
     allow_llm_heuristic_fallback: bool = (
         os.getenv("ALLOW_LLM_HEURISTIC_FALLBACK", "false").lower() == "true"
     )
+    memory_ttl_hours: int = int(os.getenv("MEMORY_TTL_HOURS", "336"))
+    memory_max_global_facts: int = int(os.getenv("MEMORY_MAX_GLOBAL_FACTS", "600"))
+    memory_max_session_facts: int = int(os.getenv("MEMORY_MAX_SESSION_FACTS", "250"))

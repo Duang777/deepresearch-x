@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -13,6 +14,11 @@ from deepresearch_x.pipeline import ResearchPipeline
 
 
 settings = AppSettings()
+if not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
 pipeline = ResearchPipeline.from_settings(settings)
 
 BASE_DIR = Path(__file__).resolve().parent

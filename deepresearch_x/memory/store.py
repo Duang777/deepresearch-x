@@ -5,11 +5,11 @@ import json
 import sqlite3
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Protocol, Tuple
 
-from deepresearch_x.models import MemoryFact, MemoryUpsertResult, SessionCheckpoint
+from deepresearch_x.models import MemoryFact, MemoryUpsertResult, PipelineMetrics, SessionCheckpoint
 
 GLOBAL_SESSION_ID = "__global__"
 
@@ -36,6 +36,9 @@ class MemoryStore(Protocol):
         ...
 
     def get_checkpoints(self, session_id: str, limit: int = 20) -> List[SessionCheckpoint]:
+        ...
+
+    def compact(self, ttl_hours: int, max_session_facts: int, max_global_facts: int) -> int:
         ...
 
 
@@ -102,6 +105,54 @@ class InMemoryStore:
     def get_checkpoints(self, session_id: str, limit: int = 20) -> List[SessionCheckpoint]:
         with self._lock:
             return [c.model_copy(deep=True) for c in self._checkpoints.get(session_id, [])[:limit]]
+
+    def compact(self, ttl_hours: int, max_session_facts: int, max_global_facts: int) -> int:
+        removed = 0
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=max(1, ttl_hours))
+        with self._lock:
+            # TTL cleanup
+            stale_keys = []
+            for key, fact in self._facts.items():
+                try:
+                    last_seen = datetime.fromisoformat(fact.last_seen_at.replace("Z", "+00:00"))
+                    if last_seen < cutoff:
+                        stale_keys.append(key)
+                except Exception:
+                    continue
+            for key in stale_keys:
+                self._facts.pop(key, None)
+                removed += 1
+
+            # Capacity cleanup
+            global_items = [k for k, f in self._facts.items() if f.scope == "global"]
+            removed += self._trim_keys(global_items, max_global_facts)
+
+            sessions: Dict[str, List[Tuple[str, str, str]]] = {}
+            for key, fact in self._facts.items():
+                if fact.scope != "session":
+                    continue
+                sessions.setdefault(fact.session_id, []).append(key)
+            for keys in sessions.values():
+                removed += self._trim_keys(keys, max_session_facts)
+        return removed
+
+    def _trim_keys(self, keys: List[Tuple[str, str, str]], keep: int) -> int:
+        if keep <= 0:
+            for key in keys:
+                self._facts.pop(key, None)
+            return len(keys)
+        if len(keys) <= keep:
+            return 0
+        sorted_keys = sorted(
+            keys,
+            key=lambda k: (self._facts[k].confidence, self._facts[k].last_seen_at),
+            reverse=True,
+        )
+        removed = 0
+        for key in sorted_keys[keep:]:
+            self._facts.pop(key, None)
+            removed += 1
+        return removed
 
 
 class SQLiteStore:
@@ -270,7 +321,7 @@ class SQLiteStore:
                     checkpoint.claim_count,
                     checkpoint.memory_snapshot_count,
                     checkpoint.created_at,
-                    json.dumps(checkpoint.metrics, ensure_ascii=False),
+                    json.dumps(checkpoint.metrics.model_dump(), ensure_ascii=False),
                 ),
             )
 
@@ -298,10 +349,55 @@ class SQLiteStore:
                     claim_count=int(row["claim_count"]),
                     memory_snapshot_count=int(row["memory_snapshot_count"]),
                     created_at=row["created_at"],
-                    metrics=json.loads(row["metrics_json"]),
+                    metrics=PipelineMetrics(**json.loads(row["metrics_json"])),
                 )
             )
         return result
+
+    def compact(self, ttl_hours: int, max_session_facts: int, max_global_facts: int) -> int:
+        removed = 0
+        cutoff_iso = (datetime.now(timezone.utc) - timedelta(hours=max(1, ttl_hours))).isoformat()
+        with self._conn() as conn:
+            cursor = conn.execute(
+                "DELETE FROM memory_facts WHERE last_seen_at < ?",
+                (cutoff_iso,),
+            )
+            removed += cursor.rowcount if cursor.rowcount is not None else 0
+
+            rows = conn.execute(
+                """
+                SELECT memory_id, session_id, scope, confidence, last_seen_at
+                FROM memory_facts
+                ORDER BY scope, session_id, confidence DESC, last_seen_at DESC
+                """
+            ).fetchall()
+
+            global_ids = [r["memory_id"] for r in rows if r["scope"] == "global"]
+            removed += self._delete_tail(conn, global_ids, max_global_facts)
+
+            by_session: Dict[str, List[str]] = {}
+            for row in rows:
+                if row["scope"] != "session":
+                    continue
+                by_session.setdefault(row["session_id"], []).append(row["memory_id"])
+            for ids in by_session.values():
+                removed += self._delete_tail(conn, ids, max_session_facts)
+        return removed
+
+    @staticmethod
+    def _delete_tail(conn: sqlite3.Connection, ids: List[str], keep: int) -> int:
+        if keep <= 0:
+            target = ids
+        else:
+            target = ids[keep:] if len(ids) > keep else []
+        if not target:
+            return 0
+        placeholders = ",".join(["?"] * len(target))
+        cursor = conn.execute(
+            f"DELETE FROM memory_facts WHERE memory_id IN ({placeholders})",
+            target,
+        )
+        return cursor.rowcount if cursor.rowcount is not None else len(target)
 
     @staticmethod
     def _row_to_fact(row: sqlite3.Row) -> MemoryFact:
