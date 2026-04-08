@@ -1,53 +1,53 @@
 # DeepResearch-X
 
-一个面向面试展示的深度研究 Agent 项目，强调三件事：
-- 可追踪：Claim -> Evidence -> Source 链路完整
-- 可延续：会话记忆与跨轮次上下文
-- 可量化：基线与优化方案的 A/B 指标对比
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Pytest](https://img.shields.io/badge/tests-pytest%20passing-2ea44f?logo=pytest&logoColor=white)](https://pytest.org/)
+[![Memory Backend](https://img.shields.io/badge/memory-sqlite%20%7C%20openviking-0A7EA4)](docs/OPENVIKING_INTEGRATION.md)
 
-English (short): Interview-focused deep research agent with traceability, memory continuity, and measurable benchmarking.
+![DeepResearch-X Architecture Cover](docs/assets/architecture-cover.svg)
 
-## 1. 项目亮点 | Highlights
+面向深度研究任务的工程化 Agent 系统，提供可追踪证据链、分层记忆管理、可降级适配架构与可量化评测能力。
 
-### 中文
-- 多轮研究流程：`retrieve -> claim extraction -> evidence alignment -> report`
-- 证据可追踪：每条结论都能回到来源链接和证据片段
-- 稳定抓取增强：`direct fetch -> Jina Reader fallback`
-- DeerFlow 风格记忆：异步提取、去重、冲突标注、注入预算控制
-- OpenViking 可选适配：不可用时自动回退本地 SQLite
-- 评测闭环：支持 Baseline / DeerFlow-style / OpenViking 三路对比
+English (brief): A production-oriented deep research agent with traceable evidence, layered memory, graceful fallback, and measurable benchmark outputs.
 
-### English
-- Multi-loop orchestration with evidence-first reporting.
-- DeerFlow-style memory queue with budgeted injection.
-- Optional OpenViking adapter with SQLite fallback.
-- Quantitative comparison scripts for interview storytelling.
+## 核心能力
+- 多轮研究流水线：`retrieve -> claim extraction -> evidence alignment -> report`
+- 证据链可追踪：每条结论关联来源链接、相关分数、证据片段
+- 页面富文本增强：`direct fetch -> Jina Reader fallback`
+- 分层记忆机制：`session` / `global` / `hybrid`
+- 异步记忆提取：去重、冲突标注、置信度更新
+- 记忆注入预算：控制上下文大小，避免 prompt 膨胀
+- 可插拔后端：默认 SQLite，支持 OpenViking 适配与自动回退
+- 可观测性指标：延迟、成本估算、记忆命中、写入冲突等
 
-## 2. 架构总览 | Architecture
-
+## 架构设计
 ```mermaid
 flowchart LR
-    A["POST /api/research"] --> B["ResearchPipeline"]
-    B --> C["Search Adapter<br/>duckduckgo/mock"]
-    B --> D["Reader Adapter<br/>direct + r.jina.ai fallback"]
-    B --> E["LLM Adapter<br/>heuristic/openai"]
-    B --> F["MemoryService"]
-    F --> G["SQLiteStore (default)"]
-    F --> H["OpenViking Adapter (optional)"]
-    B --> I["SessionCheckpoint Store"]
-    B --> J["ResearchRunResult + Metrics"]
+    API["FastAPI API Layer"] --> PIPE["ResearchPipeline"]
+    PIPE --> SEARCH["Search Adapter<br/>duckduckgo/mock"]
+    PIPE --> READER["Reader Adapter<br/>direct + r.jina.ai fallback"]
+    PIPE --> LLM["LLM Adapter<br/>heuristic/openai"]
+    PIPE --> MEM["MemoryService"]
+    MEM --> SQL["SQLiteStore (default)"]
+    MEM --> OV["OpenViking Adapter (optional)"]
+    PIPE --> CKPT["Session Checkpoint Store"]
+    PIPE --> OUT["Structured Result + Metrics"]
 ```
 
-中文说明：
-- 核心编排在 `ResearchPipeline`。
-- `memory_backend` 可切换 `sqlite` 或 `openviking`。
-- OpenViking 接口失败时自动降级，不阻塞主流程。
+设计要点：
+- 以 `ResearchPipeline` 为唯一编排入口，保证行为一致性。
+- 通过 `adapter + protocol` 保持边界清晰，便于替换实现。
+- 外部记忆服务失败不影响主流程，自动降级本地后端。
 
-English note:
-- Adapter boundaries keep the core pipeline stable while swapping memory backends.
+## 技术栈
+- Python 3.10+
+- FastAPI / Jinja2
+- Pydantic v2
+- httpx / lxml / ddgs
+- pytest
 
-## 3. 快速开始 | Quick Start
-
+## 快速开始
 ```powershell
 cd D:/DUAN/APP/deepresearch-x
 python -m venv .venv
@@ -57,39 +57,19 @@ Copy-Item .env.example .env
 uvicorn deepresearch_x.app:app --reload
 ```
 
-打开：
+访问：
 - [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-English:
-- Run the commands above and open the local web UI.
-
-## 4. 面试 5 分钟演示路线 | 5-Minute Demo Path
-
-1. 在 UI 中输入主题，先跑一次（默认 `sqlite` + memory on）。
-2. 保持同一个 `session_id` 再跑一次，展示记忆命中与上下文延续。
-3. 调用 `GET /api/sessions/{session_id}` 展示 checkpoint。
-4. 运行对比脚本并打开 `memory_ab_report.md` 讲量化结果。
-
-```powershell
-.venv/Scripts/activate
-$env:SEARCH_PROVIDER="mock"
-python scripts/compare_benchmark.py --topics-file examples/benchmark_topics.jsonl --loops 1 --top-k 3 --limit 3 --output-dir outputs/compare
-```
-
-English:
-- Show continuity, observability, and measurable deltas in one flow.
-
-## 5. API 使用 | API
+## API 概览
 
 ### POST `/api/research`
-
 请求示例：
 ```json
 {
   "topic": "multi-agent deep research systems",
   "loops": 3,
   "top_k": 6,
-  "session_id": "interview-demo-01",
+  "session_id": "prod-session-001",
   "use_memory": true,
   "memory_backend": "sqlite",
   "memory_budget_tokens": 280,
@@ -97,57 +77,41 @@ English:
 }
 ```
 
-关键返回字段：
-- `session_id`
+响应关键字段：
+- `report_markdown`
 - `final_claims`
-- `sources`（`fetch_status`, `content_preview`）
-- `metrics`（延迟、成本、memory 指标）
-- `memory_used_count`, `memory_write_count`, `memory_conflict_count`
+- `sources`
+- `metrics`
+- `session_id`
+- `memory_used_count`
+- `memory_write_count`
+- `memory_conflict_count`
 
 ### GET `/api/sessions/{session_id}`
-- 查看该会话的 checkpoint 历史与每轮指标快照。
+- 返回会话 checkpoint 历史（含每次运行的指标快照）。
 
-### GET `/api/memory/{session_id}?memory_scope=hybrid&memory_backend=sqlite`
-- 查看会话/全局记忆条目及来源信息。
+### GET `/api/memory/{session_id}`
+- 返回会话相关记忆条目（支持 `memory_scope` 与 `memory_backend` 参数）。
 
-English:
-- The API supports both single-run outputs and session-level memory inspection.
+## 配置说明
+`.env` 关键项：
 
-## 6. 记忆机制 | Memory Design
-
-### 中文
-- 上下文分层：
-- `L0` 当前查询与实时检索结果
-- `L1` 当前会话记忆
-- `L2` 全局长期记忆
-- 注入预算：
-- `memory_budget_tokens` 限制注入上下文大小，防止 prompt 膨胀。
-- 异步提取：
-- 每轮 claims 结束后进入后台队列，执行去重、冲突标注与置信度更新。
-
-### English
-- Memory is layered (L0/L1/L2), budgeted, and asynchronously ingested.
-
-## 7. 配置项 | Configuration
-
-`.env` 关键变量：
-
-- Providers:
+- Providers
 - `SEARCH_PROVIDER=duckduckgo|mock`
 - `LLM_PROVIDER=heuristic|openai`
 - `OPENAI_MODEL=gpt-4.1-mini`
 
-- Reader:
+- Reader
 - `ENABLE_PAGE_READER=true|false`
 - `MAX_PAGE_FETCH_PER_LOOP=3`
 - `MAX_PAGE_CHARS=12000`
 - `READER_TIMEOUT_SECONDS=8`
 
-- Cost:
+- Cost
 - `CHEAP_MODEL_COST_PER_1K=0.0006`
 - `EXPENSIVE_MODEL_COST_PER_1K=0.005`
 
-- Memory:
+- Memory
 - `ENABLE_MEMORY=true|false`
 - `MEMORY_BACKEND=sqlite|openviking`
 - `MEMORY_SQLITE_PATH=outputs/memory_store.db`
@@ -155,32 +119,28 @@ English:
 - `MEMORY_SCOPE=session|global|hybrid`
 - `MEMORY_QUEUE_WAIT_MS=220`
 
-- OpenViking:
+- OpenViking
 - `OPENVIKING_BASE_URL=http://127.0.0.1:8100`
 - `OPENVIKING_TIMEOUT_SECONDS=0.8`
 
-补充文档：
+更多细节见：
 - [OpenViking Integration Notes](docs/OPENVIKING_INTEGRATION.md)
-- [Interview Demo Playbook](docs/INTERVIEW_PLAYBOOK.md)
 
-English:
-- Defaults are optimized for local demos and stable fallback behavior.
+## 评测与产物
 
-## 8. 评测与对比 | Benchmark
-
-### 单次批量跑分
+### 批量运行
 ```powershell
 .venv/Scripts/activate
 python scripts/run_benchmark.py --topics-file examples/benchmark_topics.jsonl --loops 3 --top-k 6 --output outputs/benchmark_results.jsonl
 ```
 
-### 离线可复现模式
+### 可复现离线运行
 ```powershell
 $env:SEARCH_PROVIDER="mock"
 python scripts/run_benchmark.py --topics-file examples/benchmark_topics.jsonl --loops 1 --top-k 3 --limit 3 --disable-memory --output outputs/mock_benchmark.jsonl
 ```
 
-### 三路对比（推荐面试演示）
+### 三路对比（Baseline / DeerFlow-style / OpenViking）
 ```powershell
 $env:SEARCH_PROVIDER="mock"
 python scripts/compare_benchmark.py --topics-file examples/benchmark_topics.jsonl --loops 2 --top-k 4 --limit 4 --output-dir outputs/compare
@@ -190,28 +150,20 @@ python scripts/compare_benchmark.py --topics-file examples/benchmark_topics.json
 - `outputs/compare/memory_compare_results.jsonl`
 - `outputs/compare/memory_ab_report.md`
 
-English:
-- Use mock mode for deterministic demos, then discuss production trade-offs.
-
-## 9. 测试 | Testing
-
+## 开发与测试
 ```powershell
 .venv/Scripts/activate
 python -m pytest -q
 ```
 
-当前覆盖点：
-- pipeline 主流程回归
-- memory 去重与冲突标注
-- memory budget 截断
-- openviking 适配器 fallback 契约
-- 同一 session 连续运行的上下文延续
+当前测试覆盖：
+- pipeline 主流程
+- 记忆去重与冲突标注
+- 记忆预算截断
+- OpenViking fallback 契约
+- 同 session 连续运行一致性
 
-English:
-- Tests focus on behavior that matters for demos and interview Q&A.
-
-## 10. 目录结构 | Project Structure
-
+## 目录结构
 ```text
 deepresearch-x/
   deepresearch_x/
@@ -235,24 +187,23 @@ deepresearch-x/
   scripts/
     run_benchmark.py
     compare_benchmark.py
-  tests/
-    test_pipeline.py
-    test_memory.py
   docs/
     OPENVIKING_INTEGRATION.md
     INTERVIEW_PLAYBOOK.md
+    assets/
+      architecture-cover.svg
+  tests/
+    test_pipeline.py
+    test_memory.py
 ```
 
-## 11. 常见问题 | Troubleshooting
+## 可靠性与降级策略
+- 外部搜索不可用时：自动回退 `MockSearchProvider`
+- 页面抓取失败时：自动回退 `r.jina.ai` Reader
+- OpenViking 不可达时：自动回退 SQLite（含失败冷却）
+- 所有路径保留结构化输出，避免“因单点失败导致全流程中断”
 
-Q: OpenViking 本地演示时延迟高？
-- 把 `OPENVIKING_TIMEOUT_SECONDS` 保持较低（默认 `0.8`），依赖自动 SQLite 回退。
-
-Q: 为什么看不到记忆效果？
-- 保持同一个 `session_id`，并确认 `use_memory=true`。
-
-Q: 检索质量不稳定怎么办？
-- 演示用 `SEARCH_PROVIDER=mock` 保证可复现，再补充真实检索的 trade-off 讨论。
-
-English:
-- Keep demo reliability first, then discuss production optimization plans.
+## Roadmap
+- 增加异步任务队列（任务级并发调度）
+- 增加质量评估模块（coverage / novelty / citation precision）
+- 增加 CI 持续对比基准（回归质量门禁）

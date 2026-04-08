@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B1220"/>
+      <stop offset="1" stop-color="#0E1D3A"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#5CC8FF"/>
+      <stop offset="1" stop-color="#5CFFB3"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <circle cx="1160" cy="90" r="180" fill="#4AA3FF" fill-opacity="0.10"/>
+  <circle cx="130" cy="560" r="240" fill="#62FFC6" fill-opacity="0.08"/>
+
+  <text x="80" y="110" fill="#E6F1FF" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="700">
+    DeepResearch-X
+  </text>
+  <text x="80" y="160" fill="#9FC3FF" font-family="Segoe UI, Arial, sans-serif" font-size="24">
+    Evidence-first research pipeline with layered memory and graceful fallback
+  </text>
+
+  <g stroke="url(#line)" stroke-width="2.5" fill="none" filter="url(#glow)">
+    <rect x="80" y="220" width="220" height="76" rx="14"/>
+    <rect x="350" y="220" width="240" height="76" rx="14"/>
+    <rect x="640" y="220" width="240" height="76" rx="14"/>
+    <rect x="930" y="220" width="250" height="76" rx="14"/>
+
+    <rect x="350" y="360" width="240" height="76" rx="14"/>
+    <rect x="640" y="360" width="240" height="76" rx="14"/>
+    <rect x="930" y="360" width="250" height="76" rx="14"/>
+
+    <path d="M300 258H350"/>
+    <path d="M590 258H640"/>
+    <path d="M880 258H930"/>
+    <path d="M470 296V360"/>
+    <path d="M760 296V360"/>
+    <path d="M1055 296V360"/>
+    <path d="M590 398H640"/>
+    <path d="M880 398H930"/>
+  </g>
+
+  <g fill="#EAF4FF" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="600">
+    <text x="128" y="267">API Layer</text>
+    <text x="391" y="267">ResearchPipeline</text>
+    <text x="690" y="267">Adapters</text>
+    <text x="988" y="267">Structured Output</text>
+
+    <text x="419" y="407">MemoryService</text>
+    <text x="683" y="407">SQLite Store</text>
+    <text x="968" y="407">OpenViking Adapter</text>
+  </g>
+
+  <g fill="#8DB2F0" font-family="Segoe UI, Arial, sans-serif" font-size="16">
+    <text x="91" y="560">Adapters: Search / Reader / LLM</text>
+    <text x="430" y="560">Metrics: latency, cost, memory hits, queue latency</text>
+    <text x="980" y="560">Fallback-safe by design</text>
+  </g>
+</svg>
