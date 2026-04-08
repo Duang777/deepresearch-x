@@ -1,37 +1,44 @@
 # DeepResearch-X
 
+一个工程化的深度研究 Agent 系统，专注于证据链追踪、分层记忆、可降级架构与可量化评测。  
+_A production-oriented deep research agent focused on traceability, layered memory, graceful fallback, and measurable benchmarking._
+
+## Badges
+
+**Core Stack**
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
-[![Tests](https://img.shields.io/badge/Tests-pytest-2ea44f?logo=pytest&logoColor=white)](https://pytest.org/)
-[![Memory Backend](https://img.shields.io/badge/Memory-SQLite%20%7C%20OpenViking-0A7EA4)](docs/OPENVIKING_INTEGRATION.md)
+
+**Quality**
+[![Tests](https://img.shields.io/badge/Tests-pytest%20passing-2ea44f?logo=pytest&logoColor=white)](https://pytest.org/)
+[![Memory](https://img.shields.io/badge/Memory-SQLite%20%7C%20OpenViking-0A7EA4)](docs/OPENVIKING_INTEGRATION.md)
+
+**Ecosystem**
+[![Docs](https://img.shields.io/badge/Docs-Index-1f6feb?logo=readthedocs&logoColor=white)](#docs-index)
 [![Stars](https://img.shields.io/github/stars/Duang777/deepresearch-x?style=social)](https://github.com/Duang777/deepresearch-x/stargazers)
 
-![DeepResearch-X Architecture Cover](docs/assets/architecture-cover.svg)
+## Quick Links
 
-DeepResearch-X 是一个工程化的深度研究 Agent 系统，提供证据链追踪、分层记忆管理、可插拔后端和可量化评测能力。  
-_DeepResearch-X is a production-oriented deep research agent with traceable evidence, layered memory, pluggable backends, and measurable benchmarking._
+[![Docs Index](https://img.shields.io/badge/Docs-Index-1f6feb?logo=readthedocs&logoColor=white)](#docs-index)
+[![Architecture](https://img.shields.io/badge/Architecture-Overview-0b7285?logo=diagramsdotnet&logoColor=white)](#系统架构--architecture)
+[![Quick Start](https://img.shields.io/badge/Start-Quick%20Start-2f9e44?logo=rocket&logoColor=white)](#快速开始--quick-start)
+[![API](https://img.shields.io/badge/API-Overview-f08c00?logo=fastapi&logoColor=white)](#api-概览--api-overview)
+[![Benchmark](https://img.shields.io/badge/Benchmark-Run%20Scripts-7b2cbf?logo=speedtest&logoColor=white)](#运行与评测--operations--benchmarking)
 
----
+## Visual Preview
 
-## 快速导航 | Navigation
+![Architecture Cover](docs/assets/architecture-cover.svg)
 
-- [Docs Index](#docs-index)
-- [核心特性](#核心特性--core-capabilities)
-- [系统架构](#系统架构--architecture)
-- [快速开始](#快速开始--quick-start)
-- [配置说明](#配置说明--configuration)
-- [API 概览](#api-概览--api-overview)
-- [运行与评测](#运行与评测--operations--benchmarking)
-- [质量保障](#质量保障--quality-gates)
-- [项目结构](#项目结构--project-layout)
-- [Roadmap](#roadmap)
+**Runtime Demo (GIF)**
+
+![Runtime Demo](docs/assets/runtime-demo.gif)
 
 ## Docs Index
 
 | 文档 | 说明 | English |
 |---|---|---|
-| [README.md](README.md) | 项目总览、架构、API、运行方式 | Project overview, architecture, API, operations |
+| [README.md](README.md) | 项目总览、架构、API、运行与评测 | Project overview, architecture, API, operations |
 | [docs/OPENVIKING_INTEGRATION.md](docs/OPENVIKING_INTEGRATION.md) | OpenViking 集成与运维手册 | OpenViking integration and operations guide |
 | [docs/INTERVIEW_PLAYBOOK.md](docs/INTERVIEW_PLAYBOOK.md) | 开发运行与演示流程手册 | Developer runbook and demo procedure |
 
@@ -40,13 +47,13 @@ _DeepResearch-X is a production-oriented deep research agent with traceable evid
 | 能力 | 说明 | English |
 |---|---|---|
 | 多轮研究流水线 | `retrieve -> claim extraction -> evidence alignment -> report` | Multi-loop orchestration pipeline |
-| 证据链追踪 | 结论绑定来源 URL、相关度分数和证据片段 | Claim-to-source traceability |
+| 证据链追踪 | 结论绑定来源 URL、相关度分数、证据片段 | Claim-to-source traceability |
 | 富文本抓取增强 | `direct fetch` 失败时回退 `r.jina.ai` | Full-text enrichment with fallback |
-| 分层记忆 | `session` / `global` / `hybrid` 三种作用域 | Layered memory scopes |
+| 分层记忆作用域 | `session` / `global` / `hybrid` | Layered memory scopes |
 | 异步记忆提取 | 去重、冲突标注、置信度更新 | Async memory extraction and reconciliation |
-| 预算化注入 | `memory_budget_tokens` 控制上下文体积 | Budgeted memory injection |
-| 后端可插拔 | SQLite 默认，OpenViking 可选并自动降级 | Pluggable backends with graceful fallback |
-| 量化评测 | 基线与优化方案三路对比报告 | Quantitative benchmarking and comparison |
+| 记忆注入预算 | `memory_budget_tokens` 限制上下文体积 | Budgeted memory injection |
+| 后端可插拔 | 默认 SQLite，支持 OpenViking 并自动降级 | Pluggable memory backends with graceful fallback |
+| 量化评测 | Baseline / DeerFlow-style / OpenViking 对比 | Quantitative benchmarking and comparison |
 
 ## 系统架构 | Architecture
 
@@ -217,13 +224,24 @@ deepresearch-x/
     INTERVIEW_PLAYBOOK.md
     assets/
       architecture-cover.svg
+      runtime-demo.gif
   tests/
     test_pipeline.py
     test_memory.py
 ```
 
+## 可靠性策略 | Reliability
+
+- 搜索不可用：自动回退 `MockSearchProvider`
+- 页面抓取失败：自动回退 `r.jina.ai` Reader
+- OpenViking 不可达：自动回退 SQLite（含失败冷却）
+- 保持结构化输出，避免单点失败导致流程中断
+
+_Failure handling is built-in to keep the pipeline operational under partial outages._
+
 ## Roadmap
-- 引入异步任务编排队列（任务级并发调度）
-- 增加研究结果质量评估模块（coverage/novelty/citation precision）
+
+- 引入任务级异步编排队列
+- 增加研究质量评估模块（coverage/novelty/citation precision）
 - 接入 CI 持续基准对比与质量门禁
 - 增加可观测性导出（Prometheus/OpenTelemetry）
