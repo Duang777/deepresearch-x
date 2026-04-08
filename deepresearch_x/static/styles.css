@@ -99,6 +99,18 @@ body {
   gap: 12px;
 }
 
+.brand-row {
+  display: flex;
+  align-items: center;
+}
+
+.brand-logo {
+  width: min(420px, 78vw);
+  height: auto;
+  display: block;
+  margin-bottom: 10px;
+}
+
 .kicker {
   margin: 0;
   text-transform: uppercase;
@@ -329,6 +341,9 @@ button:disabled {
   background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
   padding: 12px;
   min-height: 90px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
 }
 
 .metric-label {
@@ -341,11 +356,37 @@ button:disabled {
 }
 
 .metric-value {
-  margin: 10px 0 0;
+  margin: 0;
   font-family: "Sora", sans-serif;
   font-weight: 700;
   font-size: 1.28rem;
   color: #1c2f45;
+}
+
+.metric-trend {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 8px;
+  letter-spacing: 0.02em;
+}
+
+.trend-up {
+  background: #daf4e7;
+  color: #126a42;
+}
+
+.trend-down {
+  background: #fde7df;
+  color: #9b3519;
+}
+
+.trend-neutral {
+  background: #e8eef5;
+  color: #4c6277;
 }
 
 .claim {
@@ -431,14 +472,71 @@ a:hover {
 }
 
 pre {
-  margin: 10px 0 0;
-  white-space: pre-wrap;
-  line-height: 1.55;
-  color: #233447;
+  margin: 0;
+}
+
+.markdown {
+  margin-top: 10px;
+  color: #253548;
+  line-height: 1.62;
   background: #f7fafc;
   border: 1px solid #d8e1ea;
   border-radius: 12px;
-  padding: 12px;
+  padding: 13px;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  font-family: "Sora", sans-serif;
+  letter-spacing: -0.01em;
+  margin: 10px 0 8px;
+}
+
+.markdown h1 {
+  font-size: 1.25rem;
+}
+
+.markdown h2 {
+  font-size: 1.1rem;
+}
+
+.markdown h3 {
+  font-size: 1rem;
+}
+
+.markdown p {
+  margin: 0 0 10px;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0 0 10px 18px;
+}
+
+.markdown code {
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 0.88rem;
+  background: #e9eff6;
+  border: 1px solid #d1dce8;
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+
+.markdown pre {
+  margin: 0 0 10px;
+  background: #eaf1f8;
+  border: 1px solid #d5dfea;
+  border-radius: 9px;
+  padding: 9px;
+  overflow: auto;
+}
+
+.markdown pre code {
+  border: none;
+  background: transparent;
+  padding: 0;
 }
 
 .step {

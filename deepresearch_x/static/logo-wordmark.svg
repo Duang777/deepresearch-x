@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="72" viewBox="0 0 420 72" fill="none">
+  <defs>
+    <linearGradient id="g1" x1="8" y1="8" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0D6EA8"/>
+      <stop offset="1" stop-color="#0F9F8E"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="26" y1="14" x2="50" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FEF6E1"/>
+      <stop offset="1" stop-color="#CBE7FF"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="64" height="64" rx="18" fill="url(#g1)"/>
+  <path d="M18 47L28 24L38 38L46 22L56 47H50L45 34L38 48L29 34L24 47H18Z" fill="url(#g2)"/>
+
+  <text x="86" y="34" fill="#17273A" font-family="Sora, Segoe UI, Arial, sans-serif" font-size="26" font-weight="800" letter-spacing="-0.03em">
+    DeepResearch-X
+  </text>
+  <text x="86" y="56" fill="#4D6076" font-family="IBM Plex Sans, Segoe UI, Arial, sans-serif" font-size="13" font-weight="500">
+    Evidence Graph · Layered Memory · Reliable Research Pipeline
+  </text>
+</svg>

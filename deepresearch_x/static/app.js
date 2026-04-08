@@ -7,6 +7,8 @@ const sourcesBox = document.getElementById("sources");
 const reportBox = document.getElementById("report");
 const traceBox = document.getElementById("trace");
 
+let previousMetrics = null;
+
 function show(el, yes = true) {
   if (yes) {
     el.classList.remove("hidden");
@@ -19,42 +21,83 @@ function show(el, yes = true) {
   }
 }
 
-function card(label, value) {
-  return `
-    <article class="metric-card">
-      <p class="metric-label">${label}</p>
-      <p class="metric-value">${value}</p>
-    </article>
-  `;
-}
-
 function sanitize(text) {
-  return text
+  return String(text)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
 }
 
+function formatDeltaNumber(delta) {
+  const abs = Math.abs(delta);
+  const value = abs >= 1 ? abs.toFixed(0) : abs.toFixed(2);
+  return `${delta > 0 ? "+" : "-"}${value}`;
+}
+
+function buildTrend(meta, currentValue, previousValue) {
+  if (previousValue === null || previousValue === undefined || Number.isNaN(previousValue)) {
+    return { label: "NEW", cls: "trend-neutral" };
+  }
+
+  const delta = currentValue - previousValue;
+  if (Math.abs(delta) < 0.0001) {
+    return { label: "UNCHANGED", cls: "trend-neutral" };
+  }
+
+  const improved = meta.higherBetter ? delta > 0 : delta < 0;
+  const arrow = improved ? "▲" : "▼";
+  const cls = improved ? "trend-up" : "trend-down";
+  const unit = meta.unit || "";
+  return { label: `${arrow} ${formatDeltaNumber(delta)}${unit}`, cls };
+}
+
+function metricCard(meta, metrics) {
+  const currentValue = metrics[meta.key];
+  const previousValue = previousMetrics ? previousMetrics[meta.key] : null;
+  const trend = buildTrend(meta, Number(currentValue || 0), Number(previousValue || 0));
+  const display = meta.formatter ? meta.formatter(currentValue) : currentValue;
+  return `
+    <article class="metric-card">
+      <p class="metric-label">${meta.label}</p>
+      <p class="metric-value">${display}</p>
+      <span class="metric-trend ${trend.cls}">${trend.label}</span>
+    </article>
+  `;
+}
+
 function renderMetrics(metrics) {
-  const cards = [
-    card("Sources", metrics.source_count),
-    card("Full-Text Sources", metrics.fulltext_source_count),
-    card("Claims", metrics.claim_count),
-    card("Latency", `${metrics.total_elapsed_ms} ms`),
-    card("Source Fetch", `${metrics.source_fetch_elapsed_ms} ms`),
-    card("Tokens", metrics.estimated_tokens.toLocaleString()),
-    card("Est. Cost", `$${metrics.estimated_cost_usd}`),
+  const specs = [
+    { key: "source_count", label: "Sources", higherBetter: true },
+    { key: "fulltext_source_count", label: "Full-Text", higherBetter: true },
+    { key: "claim_count", label: "Claims", higherBetter: true },
+    { key: "total_elapsed_ms", label: "Latency", higherBetter: false, unit: "ms", formatter: (v) => `${v} ms` },
+    { key: "source_fetch_elapsed_ms", label: "Source Fetch", higherBetter: false, unit: "ms", formatter: (v) => `${v} ms` },
+    { key: "estimated_tokens", label: "Tokens", higherBetter: false, formatter: (v) => Number(v).toLocaleString() },
+    { key: "estimated_cost_usd", label: "Est. Cost", higherBetter: false, formatter: (v) => `$${v}` },
   ];
+
   if (typeof metrics.memory_recall_hits === "number") {
-    cards.push(card("Memory Hits", metrics.memory_recall_hits));
+    specs.push({ key: "memory_recall_hits", label: "Memory Hits", higherBetter: true });
   }
   if (typeof metrics.memory_injection_tokens === "number") {
-    cards.push(card("Memory Tokens", metrics.memory_injection_tokens));
+    specs.push({
+      key: "memory_injection_tokens",
+      label: "Memory Tokens",
+      higherBetter: false,
+    });
   }
   if (typeof metrics.memory_queue_latency_ms === "number") {
-    cards.push(card("Memory Queue", `${metrics.memory_queue_latency_ms} ms`));
+    specs.push({
+      key: "memory_queue_latency_ms",
+      label: "Memory Queue",
+      higherBetter: false,
+      unit: "ms",
+      formatter: (v) => `${v} ms`,
+    });
   }
-  metricsBox.innerHTML = cards.join("");
+
+  metricsBox.innerHTML = specs.map((spec) => metricCard(spec, metrics)).join("");
+  previousMetrics = metrics;
   show(metricsBox, true);
 }
 
@@ -125,8 +168,53 @@ function renderSources(sources) {
   show(sourcesBox, true);
 }
 
+function applyInlineMarkdown(line) {
+  let html = sanitize(line);
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  return html;
+}
+
+function renderMarkdown(mdText) {
+  const src = String(mdText || "").replace(/\r\n/g, "\n");
+  const blocks = src.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+  const htmlBlocks = [];
+
+  for (const block of blocks) {
+    const lines = block.split("\n");
+    if (lines.every((l) => l.trim().startsWith("- "))) {
+      const items = lines
+        .map((l) => `<li>${applyInlineMarkdown(l.trim().slice(2))}</li>`)
+        .join("");
+      htmlBlocks.push(`<ul>${items}</ul>`);
+      continue;
+    }
+    if (lines.every((l) => /^\d+\.\s+/.test(l.trim()))) {
+      const items = lines
+        .map((l) => `<li>${applyInlineMarkdown(l.trim().replace(/^\d+\.\s+/, ""))}</li>`)
+        .join("");
+      htmlBlocks.push(`<ol>${items}</ol>`);
+      continue;
+    }
+    if (/^#{1,4}\s+/.test(lines[0])) {
+      const match = lines[0].match(/^(#{1,4})\s+(.*)$/);
+      const level = Math.min(4, match[1].length);
+      const title = applyInlineMarkdown(match[2]);
+      const rest = lines.slice(1).map((l) => applyInlineMarkdown(l)).join("<br/>");
+      htmlBlocks.push(`<h${level}>${title}</h${level}>${rest ? `<p>${rest}</p>` : ""}`);
+      continue;
+    }
+    const paragraph = lines.map((l) => applyInlineMarkdown(l)).join("<br/>");
+    htmlBlocks.push(`<p>${paragraph}</p>`);
+  }
+
+  return htmlBlocks.join("\n");
+}
+
 function renderReport(markdown) {
-  reportBox.innerHTML = `<h2>Report Draft</h2><pre>${sanitize(markdown)}</pre>`;
+  const html = renderMarkdown(markdown);
+  reportBox.innerHTML = `<h2>Report Draft</h2><article class="markdown">${html}</article>`;
   show(reportBox, true);
 }
 
