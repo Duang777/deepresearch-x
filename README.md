@@ -11,7 +11,7 @@ _A production-oriented deep research agent focused on traceability, layered memo
 [![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
 
 **Quality**
-[![Tests](https://img.shields.io/badge/Tests-pytest%20passing-2ea44f?logo=pytest&logoColor=white)](https://pytest.org/)
+[![CI](https://github.com/Duang777/deepresearch-x/actions/workflows/ci.yml/badge.svg)](https://github.com/Duang777/deepresearch-x/actions/workflows/ci.yml)
 [![Memory](https://img.shields.io/badge/Memory-SQLite%20%7C%20OpenViking-0A7EA4)](docs/OPENVIKING_INTEGRATION.md)
 
 **Ecosystem**
@@ -25,14 +25,15 @@ _A production-oriented deep research agent focused on traceability, layered memo
 [![Quick Start](https://img.shields.io/badge/Start-Quick%20Start-2f9e44?logo=rocket&logoColor=white)](#快速开始--quick-start)
 [![API](https://img.shields.io/badge/API-Overview-f08c00?logo=fastapi&logoColor=white)](#api-概览--api-overview)
 [![Benchmark](https://img.shields.io/badge/Benchmark-Run%20Scripts-7b2cbf?logo=speedtest&logoColor=white)](#运行与评测--operations--benchmarking)
+[![CI Workflow](https://img.shields.io/badge/CI-Workflow-2ea44f?logo=githubactions&logoColor=white)](https://github.com/Duang777/deepresearch-x/actions/workflows/ci.yml)
 
 ## Visual Preview
 
 ![Architecture Cover](docs/assets/architecture-cover.svg)
 
-**Runtime Demo (GIF)**
+**Runtime Preview**
 
-![Runtime Demo](docs/assets/runtime-demo.gif)
+![Runtime Preview](docs/assets/runtime-preview.png)
 
 ## Docs Index
 
@@ -224,7 +225,7 @@ deepresearch-x/
     INTERVIEW_PLAYBOOK.md
     assets/
       architecture-cover.svg
-      runtime-demo.gif
+      runtime-preview.png
   tests/
     test_pipeline.py
     test_memory.py
